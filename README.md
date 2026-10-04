@@ -100,6 +100,29 @@ Both models run on the phone through ONNX Runtime.
 | `android/` | the app: Kotlin pipeline, Compose UI, Verovio viewer. Build with `android/README.md`, release with `android/RELEASE.md` |
 | `export/` | turns the Transkun and bd1 checkpoints into the ONNX graphs the app runs |
 | `notation/` | bd1's model, tokens and checkpoint loading, used by `export/` |
+| `ytpipe/` | turns YouTube piano videos that show their sheet music into aligned score and performance pairs, for training data |
+| `transcribe/`, `evaluation/` | the helpers ytpipe needs, including the older basic-pitch transcriber it uses to align |
+
+### ytpipe
+
+`ytpipe` downloads a YouTube playlist of piano videos, finds the sheet music on
+screen, reads it with [Audiveris](https://audiveris.github.io/audiveris/),
+transcribes the audio, and lines the two up note by note. A browser editor
+lets you settle each disagreement, and MuseScore finishes the score. The
+result is exported as an ASAP-shaped dataset.
+
+```
+pip install -e ".[ytpipe]"        # plus ffmpeg, Audiveris and MuseScore
+ytpipe fetch <playlist_or_video_url>   # 1-2: audio and video
+ytpipe roi <video_id>             # 3: where the notation is, and when
+ytpipe omr <video_id>             # 4: read the sheet music
+ytpipe align <video_id>           # 5: transcribe the audio and align
+ytpipe edit <video_id>            # decide note by note, then finish in MuseScore
+ytpipe export --out DIR --performances DIR   # 6: an ASAP-shaped dataset
+```
+
+Downloads stay in the gitignored `data/yt/`; they're for your own use and
+aren't to be redistributed.
 
 Bug reports and ideas are welcome in
 [Issues](https://github.com/thenewgoat/score-from-audio/issues).

@@ -15,3 +15,6 @@ android/keystore.properties
 *.keystore
 android/app/src/main/assets/viewer/verovio-toolkit-wasm.js
 android/app/src/main/jniLibs/
+
+# ytpipe downloads: YouTube media, for your own use, never committed
+/data/

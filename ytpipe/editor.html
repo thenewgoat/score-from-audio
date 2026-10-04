@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ytpipe editor</title>
+<style>
+  :root {
+    --bg: #f6f6f4; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #deded8;
+    --agree: #a3a39c; --omr: #2f6fd6; --audio: #e07b1a; --keep: #1f9d55; --drop: #c0392b;
+    --play: #d6336c; --loop: rgba(47,111,214,0.10); --grace: #8e44ad;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 16px;
+           background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  select, button { font: inherit; padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px;
+                   background: #fff; color: var(--ink); cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .counts span { margin-right: 10px; white-space: nowrap; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px;
+         vertical-align: -1px; }
+  #sheet { background: #fff; border-bottom: 1px solid var(--line); height: 170px; display: flex;
+           align-items: center; justify-content: center; overflow: hidden; position: relative; }
+  #sheet img { max-height: 166px; max-width: 100%; }
+  .caption { position: absolute; left: 12px; top: 6px; font-size: 11.5px; color: var(--muted); }
+  #score { margin: 0 16px; height: 58vh; overflow-y: auto; background: #fff; border: 1px solid var(--line);
+           border-radius: 6px; padding: 8px; position: relative; }
+  .hflag { position: absolute; transform: translateX(-50%); font: 600 11px/16px system-ui, sans-serif;
+          padding: 0 5px; border-radius: 8px; background: var(--audio); color: #fff; cursor: pointer;
+          z-index: 2; white-space: nowrap; user-select: none; }
+  .hflag.grace { background: var(--grace); }
+  .hflag.kept { background: var(--keep); }
+  .hflag.dropped { background: #c9c9c4; color: #555; }
+  .hflag.mixed { background: linear-gradient(90deg, var(--keep) 50%, #c9c9c4 50%); }
+  .hflag.selected { outline: 2px solid #000; box-shadow: 0 0 8px #f5b301; }
+  #score .page svg { width: 100%; height: auto; display: block; }
+  #score .none { color: var(--muted); padding: 12px; }
+  #score g.note { cursor: pointer; }
+  #score g.note.omr, #score g.note.omr * { fill: var(--omr); stroke: var(--omr); }
+  #score g.note.audio, #score g.note.audio * { fill: var(--audio); stroke: var(--audio); }
+  #score g.note.kept, #score g.note.kept * { fill: var(--keep); stroke: var(--keep); }
+  #score g.note.dropped, #score g.note.dropped * { fill: #c9c9c4; stroke: #c9c9c4; }
+  #score g.note.selected { filter: drop-shadow(0 0 1.5px #000) drop-shadow(0 0 6px #f5b301); }
+  #score g.note.sounding, #score g.note.sounding * { fill: var(--play); stroke: var(--play); }
+  details { margin: 10px 16px 0; }
+  summary { cursor: pointer; color: var(--muted); padding: 4px 0; }
+  #sheet .none { color: var(--muted); }
+  #bar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 8px 16px; }
+  #bar .group { display: flex; gap: 4px; align-items: center; }
+  #time { font-variant-numeric: tabular-nums; min-width: 110px; }
+  #rollwrap { position: relative; margin: 0 16px; border: 1px solid var(--line); background: #fff;
+              border-radius: 6px; overflow: hidden; }
+  canvas { display: block; width: 100%; }
+  #status { padding: 6px 16px; color: var(--muted); min-height: 28px; }
+  #status.error { color: var(--drop); }
+  #help { padding: 0 16px 16px; color: var(--muted); font-size: 12.5px; }
+  kbd { font: 11.5px ui-monospace, monospace; border: 1px solid var(--line); border-bottom-width: 2px;
+        border-radius: 4px; padding: 0 4px; background: #fff; color: var(--ink); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Score editor</h1>
+  <select id="picker" aria-label="piece"></select>
+  <div class="counts" id="counts"></div>
+  <div style="flex:1"></div>
+  <a id="sheetlink" target="_blank" title="the video's sheet music as pages, to read beside MuseScore"><button>Sheet PDF</button></a>
+  <button id="export" title="write score.musicxml and perf.mid">Export result</button>
+  <button id="msopen" title="open the result in MuseScore on Windows">Open in MuseScore</button>
+  <button id="msreload" title="take back what was saved in MuseScore">Reload from MuseScore</button>
+</header>
+<div id="sheet"><span class="caption">In the video now</span><span class="none">loading…</span></div>
+<div id="bar">
+  <div class="group"><button id="playbtn">▶ Play</button><span id="time">0:00.0</span></div>
+  <div class="group" id="tracks"></div>
+  <div class="group"><button id="loopbtn">Loop</button></div>
+  <label class="group" title="audio-only notes that are probably overtones or re-detections of written notes">
+    <input type="checkbox" id="artefacts"> show likely artefacts <span id="artefactcount"></span></label>
+  <label class="group" title="short notes heard just before a written note: possible grace notes the OMR missed">
+    <input type="checkbox" id="graces" checked> possible grace notes <span id="gracecount"></span></label>
+  <div class="group">Zoom <input id="zoom" type="range" min="20" max="400" value="90"></div>
+  <div class="group" id="sel"></div>
+</div>
+<div id="score"><p class="none">loading…</p></div>
+<details id="rolldetails"><summary>Piano roll</summary>
+<div id="rollwrap"><canvas id="roll" height="560"></canvas></div>
+</details>
+<div id="status"></div>
+<div id="help">
+  <kbd>Space</kbd> play/pause · <kbd>1</kbd>–<kbd>4</kbd> toggle Original / OMR / Audio / Result ·
+  <kbd>n</kbd>/<kbd>p</kbd> next/previous undecided disagreement (loops it) ·
+  <kbd>k</kbd> keep · <kbd>d</kbd> drop · <kbd>u</kbd> undecide · <kbd>g</kbd> write as a grace note ·
+  <kbd>o</kbd>/<kbd>a</kbd> take OMR / audio for the loop · <kbd>l</kbd> loop on/off ·
+  click a note in the score to select it and move the playhead there.
+  In the piano roll (below the score): click empty space to move the playhead, drag to set a loop,
+  scroll wheel to move in time.
+  <br>The score is the OMR score, or your MuseScore edit once you have reloaded one. Black: the audio agrees ·
+  <span class="dot" style="background:var(--omr)"></span>OMR note the audio did not hear ·
+  <span class="dot" style="background:var(--audio)"></span><b>+N</b> flag: N notes heard near
+  that note that the OMR score does not have (click it to hear and decide them) ·
+  <span class="dot" style="background:var(--grace)"></span><b>g</b> flag: a short note heard just before that note, maybe a grace note the OMR missed (a hint: about a third are real) ·
+  <span class="dot" style="background:var(--keep)"></span>kept ·
+  <span class="dot" style="background:#c9c9c4"></span>dropped ·
+  <span class="dot" style="background:var(--play)"></span>sounding now.
+  Undecided, the OMR score wins: blue notes stay, flagged notes stay out.
+</div>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const COLORS = { agree: css("--agree"), duration_differs: css("--agree"), omr_only: css("--omr"),
+                 audio_only: css("--audio") };
+const TRACKS = [["original", "Original"], ["omr", "OMR"], ["audio", "Audio"], ["result", "Result"]];
+
+let item = null, notes = [], decisions = {}, systems = [];
+let pxPerSec = 90, viewStart = 0, playhead = 0, selected = null, selectedRows = [];
+let loop = null, looping = false;
+const enabled = { original: true, omr: false, audio: false, result: false };
+
+// ---------- data ----------
+async function getJSON(url, options) {
+  const response = await fetch(url, options);
+  const body = await response.json();
+  if (!response.ok) throw Object.assign(new Error(body.error || response.statusText), { body });
+  return body;
+}
+
+function status(text, error = false) { $("status").textContent = text; $("status").className = error ? "error" : ""; }
+
+function isKept(n) {
+  const choice = decisions[n.id];
+  if (choice === "keep" || choice === "grace") return true;
+  if (choice === "drop") return false;
+  return n.status !== "audio_only" && n.status !== "grace_candidate";
+}
+const disagreement = (n) => n.status === "omr_only" || n.status === "audio_only";
+const heardTimes = (n) => n.heard ? n.heard : [n.t_on, n.t_off];
+
+async function load(id) {
+  stop();
+  item = await getJSON(`/api/item?id=${encodeURIComponent(id)}`);
+  notes = item.notes; decisions = item.decisions || {}; systems = item.systems || [];
+  history.replaceState(null, "", `?id=${encodeURIComponent(id)}`);
+  $("sheetlink").href = `/sheet.pdf?id=${encodeURIComponent(id)}`;
+  playhead = 0; viewStart = 0; selected = null; selectedRows = []; loop = null;
+  for (const el of flagEls.values()) el.remove();
+  groups = []; flagEls = new Map();
+  buffer = null;
+  status("loading audio…");
+  const ready = () => item.edited_in_musescore
+    ? `showing your MuseScore edit from ${item.edited_in_musescore.replace("T", " ")}` : "ready";
+  loadAudio(id).then(() => status(ready())).catch((e) => status(`audio: ${e.message}`, true));
+  counts(); showSheet(); draw();
+  loadEngraving(id);
+}
+
+// ---------- engraving ----------
+let noteEls = {}, notesById = {}, sounding = new Set(), lastFollow = 0;
+async function loadEngraving(id) {
+  $("score").innerHTML = `<p class="none">engraving… (the first time takes a few seconds)</p>`;
+  notesById = Object.fromEntries(notes.map((n) => [n.id, n]));
+  try {
+    const r = await getJSON(`/api/engraving?id=${encodeURIComponent(id)}`);
+    if (!item || item.id !== id) return;
+    $("score").innerHTML = r.pages.map((svg) => `<div class="page">${svg}</div>`).join("");
+    noteEls = {};
+    for (const n of notes) { const el = document.getElementById(`row${n.id}`); if (el) noteEls[n.id] = el; }
+    sounding = new Set();
+    $("artefactcount").textContent = `(${notes.filter((n) => n.likely).length})`;
+    $("gracecount").textContent = `(${notes.filter((n) => n.status === "grace_candidate").length})`;
+    buildFlags();
+    paintScore(); counts();
+  } catch (e) { $("score").innerHTML = `<p class="none">engraving failed: ${e.message}</p>`; }
+}
+
+// ---------- flags: audio-only notes, beside the OMR note they sound nearest ----------
+let groups = [], flagEls = new Map();
+function nearestByTime(list, t) {
+  let lo = 0, hi = list.length - 1;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (list[mid].t_on < t) lo = mid + 1; else hi = mid; }
+  return [list[lo - 1], list[lo]].filter(Boolean).sort((a, b) => Math.abs(a.t_on - t) - Math.abs(b.t_on - t))[0];
+}
+function buildFlags() {
+  const anchors = { RH: [], LH: [] };
+  for (const n of notes) if (n.omr && noteEls[n.id]) anchors[n.hand === "LH" ? "LH" : "RH"].push(n);
+  for (const h of ["RH", "LH"]) anchors[h].sort((a, b) => a.t_on - b.t_on);
+  const byAnchor = new Map();
+  for (const n of notes) {
+    if (!shown(n)) continue;
+    const hand = n.pitch >= 60 ? "RH" : "LH";
+    const pool = anchors[hand].length ? anchors[hand] : anchors[hand === "RH" ? "LH" : "RH"];
+    const anchor = pool.length ? nearestByTime(pool, n.t_on) : null;
+    if (!anchor || Math.abs(anchor.t_on - n.t_on) > 1.0) continue;
+    if (!byAnchor.has(anchor.id)) byAnchor.set(anchor.id, { anchor, hand, rows: [] });
+    byAnchor.get(anchor.id).rows.push(n);
+  }
+  if (showGraces) {
+    for (const n of notes) {
+      if (n.status !== "grace_candidate" || !notesById[n.target] || !noteEls[n.target]) continue;
+      const key = `g${n.target}`;
+      if (!byAnchor.has(key)) byAnchor.set(key, { anchor: notesById[n.target], hand: notesById[n.target].hand === "LH" ? "LH" : "RH", rows: [], grace: true });
+      byAnchor.get(key).rows.push(n);
+    }
+  }
+  groups = [...byAnchor.values()];
+  for (const g of groups) { g.rows.sort((a, b) => a.t_on - b.t_on); g.t_on = g.rows[0].t_on; g.t_off = Math.max(...g.rows.map((n) => n.t_off)); }
+  groups.sort((a, b) => a.t_on - b.t_on);
+  flagEls = new Map();
+  for (const g of groups) {
+    const el = document.createElement("div");
+    el.className = "hflag"; el.textContent = g.grace ? (g.rows.length > 1 ? `g${g.rows.length}` : "g") : `+${g.rows.length}`;
+    el.title = g.grace ? `possible grace note before ${pitchName(g.anchor.pitch)}: ` + g.rows.map((n) => pitchName(n.pitch)).join(" ")
+      : `${g.rows.length} heard, not in the OMR score: ` + g.rows.map((n) => pitchName(n.pitch)).join(" ");
+    el.addEventListener("click", (e) => { e.stopPropagation(); selectRows(g.rows); });
+    $("score").appendChild(el);
+    flagEls.set(g, el);
+  }
+  placeFlags();
+}
+function placeFlags() {
+  const box = $("score").getBoundingClientRect(), top = $("score").scrollTop;
+  const used = new Map();
+  for (const [g, el] of flagEls) {
+    const r = noteEls[g.anchor.id].getBoundingClientRect();
+    const x = Math.round(r.left - box.left + (g.grace ? -10 : r.width / 2));
+    let y = g.grace ? r.top - box.top + top - 4 : g.hand === "RH" ? r.top - box.top + top - 20 : r.bottom - box.top + top + 4;
+    const key = `${x}:${g.hand}`;                        // two groups on one note: stack them
+    if (used.has(key)) y += g.hand === "RH" ? -18 : 18;
+    used.set(key, true);
+    el.style.left = `${x}px`; el.style.top = `${y}px`;
+  }
+}
+let showArtefacts = false, showGraces = true;
+function shown(n) { return n.status === "audio_only" && (showArtefacts || !n.likely); }
+function units() {
+  // What there is to decide: each OMR note the audio did not hear, each flag,
+  // and audio-only notes too far from any OMR note to be flagged.
+  const flagged = new Set(groups.flatMap((g) => g.rows.map((n) => n.id)));
+  const out = notes.filter((n) => n.status === "omr_only").map((n) => ({ t_on: n.t_on, t_off: n.t_off, rows: [n] }));
+  for (const g of groups) out.push({ t_on: g.t_on, t_off: g.t_off, rows: g.rows });
+  for (const n of notes) if (shown(n) && !flagged.has(n.id)) out.push({ t_on: n.t_on, t_off: n.t_off, rows: [n] });
+  return out.sort((a, b) => a.t_on - b.t_on);
+}
+function selectRows(rows) {
+  selectedRows = rows; selected = rows[0] || null;
+  if (loop && selected && (selected.t_on < loop[0] || selected.t_on > loop[1])) { loop = null; looping = false; $("loopbtn").classList.remove("on"); }
+  paintScore();
+  if (selected) seek(Math.max(0, selected.t_on - 0.05));
+}
+function noteClass(n) {
+  const choice = decisions[n.id];
+  if (!disagreement(n)) return choice === "drop" ? "dropped" : "agree";
+  if (choice) return choice === "keep" ? "kept" : "dropped";
+  return n.status === "omr_only" ? "omr" : "audio";
+}
+function paintScore() {
+  for (const n of notes) {
+    const el = noteEls[n.id];
+    if (!el) continue;
+    el.classList.remove("agree", "kept", "dropped", "omr", "audio", "selected");
+    el.classList.add(noteClass(n));
+    if (selectedRows.includes(n)) el.classList.add("selected");
+  }
+  for (const [g, el] of flagEls) {
+    const choices = g.rows.map((n) => decisions[n.id]);
+    const state = choices.every((c) => c === "keep" || c === "grace") ? "kept" : choices.every((c) => c === "drop") ? "dropped"
+      : choices.some((c) => c) ? "mixed" : "";
+    el.className = `hflag ${g.grace ? "grace " : ""}${state}` + (g.rows.includes(selected) ? " selected" : "");
+  }
+}
+function scrollToNote(n) {
+  const el = n && noteEls[n.id];
+  if (!el) return;
+  const box = $("score").getBoundingClientRect(), r = el.getBoundingClientRect();
+  if (r.top < box.top + 30 || r.bottom > box.bottom - 30) $("score").scrollTop += r.top - box.top - box.height / 3;
+}
+function markSounding(t) {
+  const now = new Set();
+  for (const n of notes) if (n.t_on <= t && t < Math.max(n.t_off, n.t_on + 0.15)) now.add(n.id);
+  for (const id of sounding) if (!now.has(id) && noteEls[id]) noteEls[id].classList.remove("sounding");
+  for (const id of now) if (!sounding.has(id) && noteEls[id]) noteEls[id].classList.add("sounding");
+  sounding = now;
+  const first = [...now].map((id) => notesById[id]).filter((n) => n && noteEls[n.id]).sort((a, b) => a.t_on - b.t_on)[0];
+  if (first && performance.now() - lastFollow > 400) { lastFollow = performance.now(); scrollToNote(first); }
+}
+function nearestNote(x, y, reach = 14) {
+  let best = null, bestGap = reach;
+  for (const [id, el] of Object.entries(noteEls)) {
+    const r = el.getBoundingClientRect();
+    const gap = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+    if (gap < bestGap) { bestGap = gap; best = notesById[id]; }
+  }
+  return best;
+}
+$("score").addEventListener("click", (e) => {
+  // Noteheads are small: a click that misses one picks the nearest note.
+  const g = e.target.closest("g.note");
+  const n = g && g.id.startsWith("row") ? notesById[+g.id.slice(3)] : nearestNote(e.clientX, e.clientY);
+  if (!n) return;
+  selectRows([n]);
+});
+
+function counts() {
+  const c = { agree: 0, omr_only: 0, audio_only: 0, undecided: 0 };
+  for (const n of notes) {
+    if (n.status === "agree" || n.status === "duration_differs") c.agree++;
+    else if (n.status in c) c[n.status]++;
+  }
+  c.undecided = units().filter((u) => u.rows.some((n) => !(n.id in decisions))).length;
+  $("counts").innerHTML =
+    `<span><span class="dot" style="background:var(--agree)"></span>${c.agree} agree</span>` +
+    `<span><span class="dot" style="background:var(--omr)"></span>${c.omr_only} OMR only</span>` +
+    `<span><span class="dot" style="background:var(--audio)"></span>${c.audio_only} audio only</span>` +
+    `<span><b>${c.undecided}</b> to decide</span>`;
+}
+
+// ---------- sheet ----------
+let shownSystem = null;
+function showSheet() {
+  const system = systems.find((s) => playhead >= s.t_on && playhead < s.t_off)
+    || systems.filter((s) => s.t_on <= playhead).pop() || systems[0];
+  if (!system) { $("sheet").innerHTML = `<span class="none">no systems</span>`; return; }
+  if (system === shownSystem) return;
+  shownSystem = system;
+  $("sheet").innerHTML = `<img alt="the system on screen at this time" src="/system?id=${encodeURIComponent(item.id)}&file=${system.file}">`;
+}
+
+// ---------- piano roll ----------
+const canvas = $("roll"), ctx = canvas.getContext("2d");
+const RULER = 22, HEIGHT = 560;
+function size() {
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * ratio; canvas.height = HEIGHT * ratio;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+}
+function pitchRange() {
+  let lo = 127, hi = 0;
+  for (const n of notes) { lo = Math.min(lo, n.pitch); hi = Math.max(hi, n.pitch); }
+  return notes.length ? [lo - 1, hi + 1] : [48, 84];
+}
+const width = () => canvas.clientWidth;
+const xOf = (t) => (t - viewStart) * pxPerSec;
+const tOf = (x) => viewStart + x / pxPerSec;
+function yOf(pitch) { const [lo, hi] = pitchRange(); const h = (HEIGHT - RULER) / (hi - lo + 1); return RULER + (hi - pitch) * h; }
+function rowHeight() { const [lo, hi] = pitchRange(); return (HEIGHT - RULER) / (hi - lo + 1); }
+
+function draw() {
+  if (!item) return;
+  const w = width(), h = HEIGHT, rh = rowHeight();
+  ctx.clearRect(0, 0, w, h);
+  const [lo, hi] = pitchRange();
+  for (let p = lo; p <= hi; p++) {
+    if ([1, 3, 6, 8, 10].includes(p % 12)) { ctx.fillStyle = "#f3f3f0"; ctx.fillRect(0, yOf(p), w, rh); }
+    if (p % 12 === 0) {
+      ctx.fillStyle = css("--line"); ctx.fillRect(0, yOf(p) + rh - 1, w, 1);
+      ctx.fillStyle = css("--muted"); ctx.font = "10px system-ui"; ctx.fillText(`C${p / 12 - 1}`, 2, yOf(p) + rh - 2);
+    }
+  }
+  if (loop) { ctx.fillStyle = css("--loop"); ctx.fillRect(xOf(loop[0]), 0, (loop[1] - loop[0]) * pxPerSec, h); }
+  // ruler
+  ctx.fillStyle = "#fafaf8"; ctx.fillRect(0, 0, w, RULER);
+  ctx.fillStyle = css("--muted"); ctx.font = "11px system-ui";
+  const step = pxPerSec > 150 ? 1 : pxPerSec > 60 ? 2 : 5;
+  for (let t = Math.ceil(viewStart / step) * step; xOf(t) < w; t += step) {
+    ctx.fillRect(xOf(t), RULER - 6, 1, 6); ctx.fillText(clock(t, false), xOf(t) + 3, 13);
+  }
+  for (const s of systems) { ctx.fillStyle = css("--line"); ctx.fillRect(xOf(s.t_on), RULER, 1, h - RULER); }
+  // notes: agreed first, disagreements on top
+  const order = [...notes].sort((a, b) => disagreement(a) - disagreement(b));
+  for (const n of order) {
+    const x0 = xOf(n.t_on), x1 = xOf(n.t_off);
+    if (x1 < 0 || x0 > w) continue;
+    const y = yOf(n.pitch), bw = Math.max(3, x1 - x0), keep = isKept(n), decided = n.id in decisions;
+    ctx.globalAlpha = keep ? 1 : 0.28;
+    ctx.fillStyle = COLORS[n.status];
+    ctx.fillRect(x0, y + 1, bw, rh - 2);
+    if (n.status === "duration_differs") { ctx.strokeStyle = "#555"; ctx.lineWidth = 1; ctx.strokeRect(x0 + 0.5, y + 1.5, bw - 1, rh - 3); }
+    if (!keep) { ctx.strokeStyle = css("--drop"); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x0, y + rh / 2); ctx.lineTo(x0 + bw, y + rh / 2); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    if (decided && keep) { ctx.fillStyle = css("--keep"); ctx.fillRect(x0, y + 1, 3, rh - 2); }
+    if (n === selected) { ctx.strokeStyle = css("--ink"); ctx.lineWidth = 2; ctx.strokeRect(x0 - 1, y, bw + 2, rh); }
+  }
+  // playhead
+  ctx.fillStyle = css("--play"); ctx.fillRect(xOf(playhead), 0, 2, h);
+  $("time").textContent = clock(playhead, true);
+  showSelection();
+}
+
+function clock(t, tenths) {
+  const m = Math.floor(t / 60), s = t - m * 60;
+  return `${m}:${(tenths ? s.toFixed(1) : Math.floor(s).toString()).padStart(tenths ? 4 : 2, "0")}`;
+}
+
+const NAMES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+const pitchName = (p) => `${NAMES[p % 12]}${Math.floor(p / 12) - 1}`;
+function showSelection() {
+  if (!selected) { $("sel").textContent = ""; return; }
+  if (selected.status === "grace_candidate") {
+    const target = notesById[selected.target];
+    $("sel").textContent = `possible grace note ${selectedRows.map((n) => pitchName(n.pitch)).join(" ")} before ${target ? pitchName(target.pitch) : "?"} at ${clock(selected.t_on, true)} — ` +
+      (decisions[selected.id] || "undecided") + " (g writes it in, d drops it)";
+    return;
+  }
+  if (selectedRows.length > 1) {
+    const kept = selectedRows.filter((n) => decisions[n.id] === "keep").length;
+    const dropped = selectedRows.filter((n) => decisions[n.id] === "drop").length;
+    $("sel").textContent = `${selectedRows.length} heard at ${clock(selected.t_on, true)}, not in the OMR score: ` +
+      selectedRows.map((n) => pitchName(n.pitch)).join(" ") + ` — ${kept} kept, ${dropped} dropped`;
+    return;
+  }
+  const n = selected, choice = decisions[n.id] || "undecided";
+  const label = { agree: "both", duration_differs: "both, lengths differ", omr_only: "OMR only", audio_only: "audio only" }[n.status];
+  $("sel").textContent = `${NAMES[n.pitch % 12]}${Math.floor(n.pitch / 12) - 1} at ${clock(n.t_on, true)} — ${label}` +
+    (n.measure ? `, bar ${n.measure} ${n.hand}` : "") + ` — ${choice}`;
+}
+
+function noteAt(x, y) {
+  const t = tOf(x), rh = rowHeight();
+  let best = null;
+  for (const n of notes) {
+    const ny = yOf(n.pitch);
+    if (y >= ny && y < ny + rh && t >= n.t_on - 3 / pxPerSec && t <= Math.max(n.t_off, n.t_on + 3 / pxPerSec)) {
+      if (!best || disagreement(n) > disagreement(best)) best = n;
+    }
+  }
+  return best;
+}
+
+let dragFrom = null;
+canvas.addEventListener("mousedown", (e) => { dragFrom = e.offsetX; });
+canvas.addEventListener("mouseup", (e) => {
+  const moved = dragFrom !== null && Math.abs(e.offsetX - dragFrom) > 5;
+  if (moved) {
+    const a = tOf(Math.min(dragFrom, e.offsetX)), b = tOf(Math.max(dragFrom, e.offsetX));
+    loop = [Math.max(0, a), b]; looping = true; $("loopbtn").classList.add("on"); seek(loop[0]);
+  } else {
+    const hit = e.offsetY > RULER ? noteAt(e.offsetX, e.offsetY) : null;
+    if (hit) { selectedRows = [hit]; selected = hit; paintScore(); scrollToNote(hit); draw(); }
+    else { selected = null; selectedRows = []; paintScore(); seek(tOf(e.offsetX)); }
+  }
+  dragFrom = null;
+});
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  viewStart = Math.max(0, viewStart + (e.deltaX || e.deltaY) / pxPerSec);
+  draw();
+}, { passive: false });
+$("zoom").addEventListener("input", (e) => {
+  const centre = viewStart + width() / pxPerSec / 2;
+  pxPerSec = +e.target.value; viewStart = Math.max(0, centre - width() / pxPerSec / 2); draw();
+});
+window.addEventListener("resize", () => { size(); draw(); placeFlags(); });
+$("rolldetails").addEventListener("toggle", () => { size(); draw(); });
+
+// ---------- decisions ----------
+let pending = {}, flushTimer = null;
+function decide(list, choice) {
+  for (const n of list) {
+    if (choice) decisions[n.id] = choice; else delete decisions[n.id];
+    pending[n.id] = choice || null;
+  }
+  clearTimeout(flushTimer); flushTimer = setTimeout(flush, 250);
+  counts(); paintScore(); draw();
+}
+async function flush() {
+  const batch = pending; pending = {};
+  if (!Object.keys(batch).length) return;
+  try { await getJSON(`/api/decide?id=${encodeURIComponent(item.id)}`, { method: "POST", body: JSON.stringify({ decisions: batch }) }); }
+  catch (e) { status(`not saved: ${e.message}`, true); Object.assign(pending, batch); }
+}
+window.addEventListener("beforeunload", () => { if (Object.keys(pending).length) flush(); });
+
+function jump(direction) {
+  const pool = units().filter((u) => u.rows.some((n) => !(n.id in decisions)));
+  if (!pool.length) { status("nothing left to decide"); return; }
+  const from = selected ? selected.t_on : playhead - 0.001;
+  const next = direction > 0 ? pool.find((u) => u.t_on > from + 1e-6) || pool[0]
+                             : [...pool].reverse().find((u) => u.t_on < from - 1e-6) || pool[pool.length - 1];
+  selectedRows = next.rows; selected = next.rows[0];
+  loop = [Math.max(0, next.t_on - 1.5), next.t_off + 1.5];
+  looping = true; $("loopbtn").classList.add("on");
+  viewStart = Math.max(0, next.t_on - width() / pxPerSec / 3);
+  paintScore();
+  const group = groups.find((g) => g.rows === next.rows);
+  if (group) scrollToNote(group.anchor); else scrollToNote(selected);
+  seek(loop[0]);
+}
+
+function takeSide(side) {
+  if (!loop) { status("drag across the roll to set a loop first"); return; }
+  const inside = notes.filter((n) => disagreement(n) && n.t_on >= loop[0] && n.t_on <= loop[1]);
+  const keepStatus = side === "omr" ? "omr_only" : "audio_only";
+  decide(inside.filter((n) => n.status === keepStatus), "keep");
+  decide(inside.filter((n) => n.status !== keepStatus), "drop");
+  status(`took ${side === "omr" ? "OMR" : "audio"} for ${inside.length} disagreements in the loop`);
+}
+
+// ---------- audio ----------
+let audioCtx = null, buffer = null, source = null, startedAt = 0, startOffset = 0, playing = false;
+let scheduled = 0, schedulerTimer = null, voices = [];
+const gains = {};
+
+async function loadAudio(id) {
+  audioCtx = audioCtx || new AudioContext();
+  const data = await (await fetch(`/audio?id=${encodeURIComponent(id)}`)).arrayBuffer();
+  buffer = await audioCtx.decodeAudioData(data);
+}
+function master(track) {
+  if (!gains[track]) { gains[track] = audioCtx.createGain(); gains[track].connect(audioCtx.destination); }
+  gains[track].gain.value = enabled[track] ? 1 : 0;
+  return gains[track];
+}
+function now() { return playing ? startOffset + (audioCtx.currentTime - startedAt) : playhead; }
+
+function play() {
+  if (!buffer) { status("audio still loading"); return; }
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  stop(true);
+  source = audioCtx.createBufferSource(); source.buffer = buffer; source.connect(master("original"));
+  startedAt = audioCtx.currentTime + 0.05; startOffset = playhead; scheduled = playhead;
+  source.start(startedAt, playhead);
+  playing = true; $("playbtn").textContent = "❚❚ Pause";
+  schedulerTimer = setInterval(tick, 40);
+  requestAnimationFrame(frame);
+}
+function stop(keep) {
+  if (source) { try { source.stop(); } catch (e) {} source = null; }
+  for (const v of voices) { try { v.stop(); } catch (e) {} } voices = [];
+  clearInterval(schedulerTimer);
+  if (playing && !keep) playhead = now();
+  playing = false; $("playbtn").textContent = "▶ Play";
+  for (const id of sounding) if (noteEls[id]) noteEls[id].classList.remove("sounding");
+  sounding = new Set();
+}
+function seek(t) {
+  playhead = Math.max(0, t);
+  if (playing) play(); else draw();
+  showSheet();
+}
+function frame() {
+  if (!playing) return;
+  const t = now();
+  if (looping && loop && t >= loop[1]) { playhead = loop[0]; play(); return; }
+  playhead = t;
+  markSounding(t);
+  if (xOf(t) > width() * 0.85 || xOf(t) < 0) viewStart = Math.max(0, t - width() / pxPerSec * 0.15);
+  showSheet(); draw();
+  requestAnimationFrame(frame);
+}
+function trackNotes(track) {
+  if (track === "omr") return notes.filter((n) => n.omr).map((n) => [n.t_on, n.t_off, n.pitch]);
+  if (track === "audio") return notes.filter((n) => n.audio).map((n) => [...heardTimes(n), n.pitch]);
+  return notes.filter(isKept).map((n) => [...heardTimes(n), n.pitch]);
+}
+function tick() {
+  const horizon = now() + 0.25;
+  for (const track of ["omr", "audio", "result"]) {
+    if (!enabled[track]) continue;
+    for (const [on, off, pitch] of trackNotes(track)) {
+      if (on >= scheduled && on < horizon && (!looping || !loop || on < loop[1])) synth(track, on, off, pitch);
+    }
+  }
+  scheduled = horizon;
+}
+function synth(track, on, off, pitch) {
+  const when = startedAt + (on - startOffset), end = startedAt + (Math.max(off, on + 0.08) - startOffset);
+  if (when < audioCtx.currentTime - 0.01) return;
+  const freq = 440 * Math.pow(2, (pitch - 69) / 12);
+  const env = audioCtx.createGain();
+  env.gain.setValueAtTime(0, when);
+  env.gain.linearRampToValueAtTime(0.16, when + 0.006);
+  env.gain.exponentialRampToValueAtTime(0.05, when + Math.min(1.2, Math.max(0.1, end - when)));
+  env.gain.setTargetAtTime(0, end, 0.04);
+  env.connect(master(track));
+  for (const [type, mult, level] of [["triangle", 1, 1], ["sine", 2, 0.3]]) {
+    const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+    osc.type = type; osc.frequency.value = freq * mult; g.gain.value = level;
+    osc.connect(g); g.connect(env); osc.start(when); osc.stop(end + 0.3);
+    voices.push(osc);
+    osc.onended = () => { voices = voices.filter((v) => v !== osc); };
+  }
+}
+
+// ---------- controls ----------
+function buildTracks() {
+  $("tracks").innerHTML = "";
+  TRACKS.forEach(([key, label], i) => {
+    const b = document.createElement("button");
+    b.textContent = `${i + 1} ${label}`; b.className = enabled[key] ? "on" : "";
+    b.onclick = () => toggle(key);
+    b.id = `track-${key}`;
+    $("tracks").appendChild(b);
+  });
+}
+function toggle(key) {
+  enabled[key] = !enabled[key];
+  $(`track-${key}`).className = enabled[key] ? "on" : "";
+  if (audioCtx && gains[key]) gains[key].gain.value = enabled[key] ? 1 : 0;
+  if (playing && key !== "original") play();
+}
+$("playbtn").onclick = () => (playing ? stop() : play());
+$("graces").onchange = (e) => {
+  showGraces = e.target.checked;
+  for (const el of flagEls.values()) el.remove();
+  buildFlags(); paintScore(); counts();
+};
+$("artefacts").onchange = (e) => {
+  showArtefacts = e.target.checked;
+  for (const el of flagEls.values()) el.remove();
+  buildFlags(); paintScore(); counts();
+};
+$("loopbtn").onclick = () => { looping = !looping; $("loopbtn").classList.toggle("on", looping); };
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT") return;
+  const key = e.key;
+  if (key === " ") { e.preventDefault(); playing ? stop() : play(); }
+  else if ("1234".includes(key)) toggle(TRACKS[+key - 1][0]);
+  else if (key === "n") jump(1);
+  else if (key === "p") jump(-1);
+  else if (key === "k" && selectedRows.length) decide(selectedRows, "keep");
+  else if (key === "d" && selectedRows.length) decide(selectedRows, "drop");
+  else if (key === "u" && selectedRows.length) decide(selectedRows, null);
+  else if (key === "g" && selectedRows.length) {
+    if (selectedRows.every((n) => n.status === "grace_candidate")) decide(selectedRows, "grace");
+    else status("g writes a possible grace note (purple g flag) in; select one first");
+  }
+  else if (key === "o") takeSide("omr");
+  else if (key === "a") takeSide("audio");
+  else if (key === "l") $("loopbtn").click();
+});
+
+async function post(path, body = {}) {
+  await flush();
+  return getJSON(`${path}?id=${encodeURIComponent(item.id)}`, { method: "POST", body: JSON.stringify(body) });
+}
+$("export").onclick = async () => {
+  status("exporting…");
+  try {
+    const r = await post("/api/export");
+    status(`wrote score.musicxml and perf.mid: ${r.notes} notes, ${r.dropped} dropped, ${r.added} added from audio, ${r.graces} grace notes written in`);
+  } catch (e) { status(e.message, true); }
+};
+$("msopen").onclick = async () => {
+  status("opening in MuseScore…");
+  try { const r = await post("/api/musescore/open"); status(`opened ${r.path}. Save there, then Reload.`); }
+  catch (e) { status(e.message, true); }
+};
+$("msreload").onclick = async () => {
+  status("reloading from MuseScore and re-aligning (about half a minute)…");
+  try {
+    const r = await post("/api/musescore/reload");
+    await load(item.id);
+    status(`showing your MuseScore edit (from ${r.from.split("/").pop()}); flags now compare it with the audio`);
+  }
+  catch (e) { status(e.message, true); }
+};
+
+(async function start() {
+  size(); buildTracks();
+  const list = await getJSON("/api/items");
+  $("picker").innerHTML = list.map((i) => `<option value="${i.id}">${(i.title || i.id).replace(/</g, "&lt;")}</option>`).join("");
+  $("picker").onchange = (e) => load(e.target.value);
+  const wanted = new URLSearchParams(location.search).get("id");
+  const first = list.find((i) => i.id === wanted) || list[0];
+  if (!first) { status("no aligned pieces yet: run `ytpipe align` first", true); return; }
+  $("picker").value = first.id;
+  await load(first.id);
+})().catch((e) => status(e.message, true));
+</script>
+</body>
+</html>
