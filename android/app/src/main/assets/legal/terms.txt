@@ -1,0 +1,54 @@
+// DRAFT. Not legal advice. Have a lawyer review this before the app is published.
+// If these terms change in substance, bump Consent.TERMS_VERSION so people are asked again.
+
+Last updated: 3 October 2026
+
+These terms are an agreement between you and thenewgoat ("we", "us"), who makes the Score from audio app (the "app"). By tapping "Agree and continue", or by using the app, you agree to them. If you do not agree, do not use the app.
+
+# 1. What the app does
+
+The app turns a recording of piano music into sheet music. It listens to audio you record, import or fetch from a YouTube or Instagram link, works out which notes were played, and writes them as a score you can view, play back and export. All of the transcription happens on your phone.
+
+# 2. Free, and for non-commercial use only
+
+The app is free. It has no ads, no in-app purchases and no subscriptions.
+
+The app's machine-learning models were trained on music datasets licensed under Creative Commons Attribution-NonCommercial-ShareAlike 4.0 (CC BY-NC-SA 4.0). To respect those licences, we give you a personal, non-exclusive, non-transferable, revocable licence to use the app for non-commercial purposes only. Non-commercial means not primarily intended for or directed towards commercial advantage or money. Practising, teaching yourself, and sharing scores with friends, students or bandmates without charge are all fine. Selling the app, selling access to it, or building a paid product or service on it is not.
+
+You may not sell, rent or sublicense the app, remove its notices, or present it as your own.
+
+# 3. Your music and your scores
+
+You are responsible for what you record and import. Only transcribe music that you have the right to use, for example your own playing of a public-domain piece, your own composition, or music whose rights holder allows it. A transcription of a copyrighted song can itself be a copy or adaptation of that song, and sharing it may need the rights holder's permission.
+
+We claim no ownership of your recordings or of the scores the app makes from them. Because they never leave your phone, we never see them.
+
+# 4. YouTube and Instagram links
+
+The app can fetch the audio of a YouTube video or an Instagram post you share or paste into it. YouTube is a service of Google LLC and Instagram of Meta Platforms, Inc.; the app is not affiliated with, endorsed by or sponsored by any of them. Those services' own terms may not allow downloading. Whether and how you use this feature is up to you, and so is having the right to use the music as section 3 describes. Logging in to Instagram is optional, happens on Instagram's own page, and can get your account rate-limited if used heavily. This feature may stop working at any time, for example when a site changes how its videos can be reached.
+
+# 5. Results are automatic and may be wrong
+
+Scores are produced automatically by machine-learning models. They will contain mistakes: missing or extra notes, wrong rhythms, keys, metres, hands or voices. Check a score before relying on it, especially for performance, teaching or publication.
+
+# 6. Open-source software and models
+
+The app includes open-source software and machine-learning models, each under its own licence. Those licences, and the credits for the people and datasets behind them, are listed under About, Credits and licences. Where a licence there gives you rights that these terms do not, that licence applies to that component.
+
+The notation model we trained ourselves is made available under CC BY-NC-SA 4.0, the same licence as the dataset it learned from.
+
+# 7. No warranty
+
+The app is provided "as is" and "as available", without warranties of any kind, express or implied, including fitness for a particular purpose, accuracy, and non-infringement, to the fullest extent the law allows. We do not promise that the app will work on your device, without interruption, or without errors, or that it will keep your recordings and scores safe. Keep copies of anything that matters to you.
+
+# 8. Limitation of liability
+
+To the fullest extent the law allows, we are not liable for any indirect, incidental, special or consequential loss, or for any loss of data, arising from your use of the app. Because the app is free, our total liability to you for anything arising from it is limited to zero, or to the lowest amount the law allows if it does not allow that. Nothing in these terms limits any liability, or any right you have as a consumer, that cannot be limited or excluded by law.
+
+# 9. Changes and ending
+
+We may update the app or these terms. If we change the terms in a way that matters, the app will ask you to agree again before you carry on using it. You can stop using the app at any time by uninstalling it, which also deletes your recordings and scores from the phone. We may stop offering the app at any time.
+
+# 10. Contact
+
+Questions about these terms: https://github.com/thenewgoat/score-from-audio/issues

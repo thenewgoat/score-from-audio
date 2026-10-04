@@ -1,0 +1,57 @@
+// DRAFT. Not legal advice. Have a lawyer review this before the app is published.
+// Google Play also needs this policy at a public web address; publish the same text there.
+// Every claim below was checked against the release build: INTERNET is used only by yt-dlp (YouTube and Instagram extractors only)
+// and the Instagram login WebView; no analytics, ads or crash reporting libraries; backups and device transfers excluded. Re-check them whenever a dependency or permission changes.
+
+Last updated: 3 October 2026
+
+This policy explains how the Score from audio app (the "app"), made by thenewgoat ("we", "us"), handles your information. In short: we collect nothing, and your recordings and scores never leave your phone. The app goes online only to fetch a YouTube or Instagram link you give it.
+
+# What we collect
+
+Nothing. The app has no accounts of its own, no analytics, no advertising, no crash reporting and no tracking of any kind. We run no servers, so nothing the app does ever reaches us.
+
+# When the app goes online
+
+Only in these two cases, and only when you start them:
+
+- YouTube and Instagram links. When you share or paste one, the app downloads that video's audio directly from YouTube or Instagram, so a score can be made from it on the phone. The site sees that request as it would from a web browser: your IP address, the video's address and, for Instagram if you are logged in, your Instagram session.
+- Logging in to Instagram. Under Settings you can log in to Instagram so that posts which need a login can be fetched. The login page is Instagram's own, shown inside the app; your password goes to Instagram and never passes through the app. The app keeps only the session cookies Instagram sets, in its private storage, until you log out.
+
+Those sites' handling of the requests is governed by Google's and Meta's privacy policies, not this one. The app does not support links from any other site.
+
+# What stays on your phone
+
+- Recordings you make, and audio or video files you import, are copied into the app's private storage so a score can be made from them and played back alongside it.
+- The scores the app makes, and your edits to them, are kept there too.
+- If you logged in to Instagram, its session cookies. Logging out under Settings deletes them.
+- A note that you have agreed to the terms.
+
+This data never leaves your phone. Other apps cannot read the app's private storage, and the app excludes it from Android backups and from transfers to a new phone. You can delete any score, with its recording, from the library. Uninstalling the app deletes everything.
+
+# Permissions
+
+- Microphone: used only while you are recording, to capture the music you play. Recording happens only when you tap Record, and Android shows that the microphone is in use.
+- Internet: only to fetch YouTube and Instagram links you give the app and to show Instagram's login page, as described above. Recordings, scores and anything else about you are never sent.
+- Notifications: to tell you when a score is ready, and to show progress while one is being made in the background.
+- Foreground service: so a score keeps being made, or a recording keeps going, if you leave the app.
+
+# Sharing and exporting
+
+When you share a score, Android's share sheet sends it to the app you pick, such as email, cloud storage or a notation editor. What happens to it after that is governed by that app's privacy policy, not this one.
+
+# Google Play
+
+If you installed the app from Google Play, Google may collect information about the installation and your device under its own privacy policy. We receive only the aggregated, anonymous statistics Google Play gives every developer, such as install counts and crash rates if you have chosen to share them with developers.
+
+# Children
+
+The app collects no personal information from anyone, including children.
+
+# Changes
+
+If this policy changes, the new version will be in the app, with a new date at the top. If a change matters, the app will ask you to review it before you carry on using it.
+
+# Contact
+
+Questions about privacy: https://github.com/thenewgoat/score-from-audio/issues

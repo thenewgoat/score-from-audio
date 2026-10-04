@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paper behind the first frame and the status bar, so the app does not flash white before Compose draws. -->
+    <style name="Theme.Scores" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F5F1E8</item>
+        <item name="android:statusBarColor">#F5F1E8</item>
+        <item name="android:navigationBarColor">#F5F1E8</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

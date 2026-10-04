@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "description": "Verovio, copied into the app's assets at build time (LGPL-3.0).",
+  "dependencies": { "verovio": "4.3.1" }
+}

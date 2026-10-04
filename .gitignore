@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# Exported graphs: built locally from the checkpoints, published only inside the APK
+android/models/
+android/viewer/node_modules/
+android/**/build/
+android/.gradle/
+android/local.properties
+android/keystore.properties
+*.jks
+*.keystore
+android/app/src/main/assets/viewer/verovio-toolkit-wasm.js
+android/app/src/main/jniLibs/

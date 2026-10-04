@@ -1,0 +1,39 @@
+// DRAFT. Have this reviewed with the terms. The jazz-export line under the notation model depends on the user's
+// decision about retraining bd1; update it (and the training-data list) if the shipped checkpoint changes.
+
+Score from audio is built on other people's research, software and data. Thank you to all of them.
+
+# Note detection: Transkun
+
+The notes are found by Transkun, by Yujia Yan, Frank Cwitkowitz and Zhiyao Duan ("Skipping the Frame-Level: Event-Based Piano Transcription With Neural Semi-CRFs", NeurIPS 2021, and its follow-up work). Code and weights: https://github.com/Yujia-Yan/Skipping-The-Frame-Level, MIT License, Copyright (c) 2021 Yujia Yan.
+
+The app runs the published Transkun 2.0 weights, converted to ONNX and partly quantised to 8-bit integers by us. Those weights were trained on the MAESTRO dataset.
+
+MAESTRO v3.0.0: Curtis Hawthorne, Andriy Stasyuk, Adam Roberts, Ian Simon, Cheng-Zhi Anna Huang, Sander Dieleman, Erich Elsen, Jesse Engel and Douglas Eck, "Enabling Factorized Piano Music Modeling and Generation with the MAESTRO Dataset", ICLR 2019. Google LLC. Licensed under CC BY-NC-SA 4.0: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+# Notation: our model, bd1
+
+The notes are written as a score by a notation model we trained ourselves. Its design follows the work of Tim Beyer and Angela Dai ("End-to-End Piano Performance-MIDI to Score Conversion with Transformers", ISMIR 2024). The weights are ours and are licensed under CC BY-NC-SA 4.0: https://creativecommons.org/licenses/by-nc-sa/4.0/. Changes from the training data: performances were aligned to scores, encoded as note tokens, and used to train a transformer; the model contains no copy of the data.
+
+It learned from:
+
+- ASAP (Aligned Scores and Performances): Francesco Foscarin, Andrew McLeod, Philippe Rigaux, Florent Jacquemard and Masahiko Sakai, "ASAP: a dataset of aligned scores and performances for piano transcription", ISMIR 2020. Licensed under CC BY-NC-SA 4.0. https://github.com/fosfrancesco/asap-dataset
+- PDMX: Phillip Long, Zachary Novack, Taylor Berg-Kirkpatrick and Julian McAuley, "PDMX: A Large-Scale Public Domain MusicXML Dataset for Symbolic Music Processing", 2024. Only scores marked public domain or CC0 were used, played back synthetically.
+- A small set of jazz piano transcriptions we made ourselves.
+
+# Score display: Verovio
+
+Scores are engraved by Verovio 4.3.1, by the RISM Digital Center and contributors, https://www.verovio.org. Verovio is licensed under the GNU Lesser General Public License, version 3 or later; the full text of the LGPL and of the GPL it builds on is under Full licence texts. Its source code is at https://github.com/rism-digital/verovio. The app uses Verovio unmodified, as the separate file assets/viewer/verovio-toolkit-wasm.js inside the app package, which you may replace with your own build of the same interface. Verovio includes music fonts licensed under the SIL Open Font License 1.1.
+
+# Software libraries
+
+- yt-dlp 2026.8.19, by the yt-dlp contributors, which fetches YouTube and Instagram links. Released into the public domain under the Unlicense. https://github.com/yt-dlp/yt-dlp
+- yt-dlp-ejs 0.8.0, by the yt-dlp contributors (the Unlicense; it bundles meriyah, ISC License, and astring, MIT License), and QuickJS-ng, by Fabrice Bellard, Charlie Gordon and the QuickJS-ng contributors (MIT License), which solve YouTube's JavaScript challenges.
+- Python 3.13, Python Software Foundation. Python Software Foundation License Version 2.
+- Chaquopy, which runs Python inside the app, Chaquo Ltd. MIT License. https://chaquo.com/chaquopy/
+- certifi, Kenneth Reitz. Mozilla Public License 2.0; its source is at https://github.com/certifi/python-certifi
+- ONNX Runtime 1.20.0, Microsoft Corporation. MIT License. https://github.com/microsoft/onnxruntime
+- Kotlin standard library, kotlinx.coroutines and kotlinx.serialization, JetBrains s.r.o. and contributors. Apache License 2.0.
+- Android Jetpack (AndroidX Core, Activity, Lifecycle, WebKit and Jetpack Compose including Material 3), The Android Open Source Project. Apache License 2.0.
+
+The full text of each licence is under Full licence texts.
